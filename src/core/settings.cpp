@@ -580,6 +580,26 @@ void Settings::Load(const SettingsInterface& si, const SettingsInterface& contro
   pcdrv_enable_writes = si.GetBoolValue("PCDrv", "EnableWrites", false);
   pcdrv_root = si.GetStringValue("PCDrv", "Root");
 
+  // VR Settings
+  vr_enable = si.GetBoolValue("VR", "Enable", false);
+  vr_first_person_enable = si.GetBoolValue("VR", "FirstPersonEnable", false);
+  vr_show_debug_window = si.GetBoolValue("VR", "ShowDebugWindow", false);
+  vr_eye_height = si.GetFloatValue("VR", "EyeHeight", 0.160f);
+  vr_world_scale = si.GetFloatValue("VR", "WorldScale", 0.001f);
+  vr_screen_distance = si.GetFloatValue("VR", "ScreenDistance", 2.0f);
+  vr_screen_scale = si.GetFloatValue("VR", "ScreenScale", 1.5f);
+  vr_navigation_mode =
+    Settings::ParseVRNavigationModeName(
+      si.GetStringValue("VR", "NavigationMode",
+                        Settings::GetVRNavigationModeName(VRNavigationMode::Hybrid))
+          .c_str())
+      .value_or(VRNavigationMode::Hybrid);
+  vr_rotation_speed = si.GetFloatValue("VR", "RotationSpeed", 2.0f);
+  vr_stick_deadzone = si.GetFloatValue("VR", "StickDeadzone", 0.15f);
+  vr_drift_correction_alpha = si.GetFloatValue("VR", "DriftCorrectionAlpha", 0.01f);
+  vr_snap_turn_angle = si.GetFloatValue("VR", "SnapTurnAngle", 30.0f);
+  vr_lighting_overlay_alpha = si.GetFloatValue("VR", "LightingOverlayAlpha", 0.25f);
+
 #ifdef __ANDROID__
   // Android users are incredibly silly and don't understand that stretch is in the aspect ratio list...
   if (si.GetBoolValue("Display", "Stretch", false))
@@ -896,6 +916,21 @@ void Settings::Save(SettingsInterface& si, bool ignore_base) const
   si.SetBoolValue("PCDrv", "Enabled", pcdrv_enable);
   si.SetBoolValue("PCDrv", "EnableWrites", pcdrv_enable_writes);
   si.SetStringValue("PCDrv", "Root", pcdrv_root.c_str());
+
+  // VR Settings
+  si.SetBoolValue("VR", "Enable", vr_enable);
+  si.SetBoolValue("VR", "FirstPersonEnable", vr_first_person_enable);
+  si.SetBoolValue("VR", "ShowDebugWindow", vr_show_debug_window);
+  si.SetFloatValue("VR", "EyeHeight", vr_eye_height);
+  si.SetFloatValue("VR", "WorldScale", vr_world_scale);
+  si.SetFloatValue("VR", "ScreenDistance", vr_screen_distance);
+  si.SetFloatValue("VR", "ScreenScale", vr_screen_scale);
+  si.SetStringValue("VR", "NavigationMode", Settings::GetVRNavigationModeName(vr_navigation_mode));
+  si.SetFloatValue("VR", "RotationSpeed", vr_rotation_speed);
+  si.SetFloatValue("VR", "StickDeadzone", vr_stick_deadzone);
+  si.SetFloatValue("VR", "DriftCorrectionAlpha", vr_drift_correction_alpha);
+  si.SetFloatValue("VR", "SnapTurnAngle", vr_snap_turn_angle);
+  si.SetFloatValue("VR", "LightingOverlayAlpha", vr_lighting_overlay_alpha);
 }
 
 bool Settings::TextureReplacementSettings::Configuration::operator==(const Configuration& rhs) const
@@ -2800,4 +2835,33 @@ std::string EmuFolders::GetOverridableResourcePath(std::string_view name)
 bool EmuFolders::IsRunningInPortableMode()
 {
   return (AppRoot == DataRoot);
+}
+
+// VR Navigation Mode name arrays
+static constexpr const std::array s_vr_navigation_mode_names = {"Tank", "CameraYaw", "Hybrid", "SnapTurn"};
+static constexpr const std::array s_vr_navigation_mode_display_names = {"Tank (Joystick)", "Camera Yaw",
+                                                                         "Hybrid", "Snap Turn"};
+static_assert(s_vr_navigation_mode_names.size() == static_cast<size_t>(VRNavigationMode::Count));
+static_assert(s_vr_navigation_mode_display_names.size() == static_cast<size_t>(VRNavigationMode::Count));
+
+std::optional<VRNavigationMode> Settings::ParseVRNavigationModeName(const char* str)
+{
+  int index = 0;
+  for (const char* name : s_vr_navigation_mode_names)
+  {
+    if (StringUtil::Strcasecmp(name, str) == 0)
+      return static_cast<VRNavigationMode>(index);
+    index++;
+  }
+  return std::nullopt;
+}
+
+const char* Settings::GetVRNavigationModeName(VRNavigationMode mode)
+{
+  return s_vr_navigation_mode_names[static_cast<size_t>(mode)];
+}
+
+const char* Settings::GetVRNavigationModeDisplayName(VRNavigationMode mode)
+{
+  return s_vr_navigation_mode_display_names[static_cast<size_t>(mode)];
 }

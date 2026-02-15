@@ -28,6 +28,7 @@
 #include "util/input_manager.h"
 #include "util/media_capture.h"
 #include "util/translation.h"
+#include "util/vr/vr_integration.h"
 
 #include "common/align.h"
 #include "common/error.h"
@@ -218,6 +219,9 @@ void ImGuiManager::RenderDebugWindows()
     }
   }
 #endif
+
+  // VR debug window (rendered inline, not as auxiliary window)
+  VR::DrawDebugWindow();
 }
 
 void ImGuiManager::DestroyAllDebugWindows()

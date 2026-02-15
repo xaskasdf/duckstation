@@ -24,6 +24,10 @@ void DoState(StateWrapper& sw);
 bool GetPreciseVertex(u32 addr, u32 value, int x, int y, int xOffs, int yOffs, float* out_x, float* out_y,
                       float* out_w);
 
+/// Vertex lookup returning raw 3D position (x, y, z) for Screenshot3D/VR geometry capture.
+bool GetPreciseVertexFor3DScreenshot(u32 addr, u32 value, int x, int y, int xOffs, int yOffs, float* out_x,
+                                     float* out_y, float* out_z);
+
 // GTE instruction hooks.
 
 void GTE_RTPS(float x, float y, float z, u32 value);

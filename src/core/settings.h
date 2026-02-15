@@ -399,6 +399,25 @@ struct Settings : public GPUSettings
 
   std::string pcdrv_root;
 
+  // VR Settings
+  bool vr_enable : 1 = false;
+  bool vr_first_person_enable : 1 = false;
+  bool vr_show_debug_window : 1 = false;
+  float vr_eye_height = 0.160f;
+  float vr_world_scale = 0.001f;
+  float vr_screen_distance = 2.0f;
+  float vr_screen_scale = 1.5f;
+  VRNavigationMode vr_navigation_mode = VRNavigationMode::Hybrid;
+  float vr_rotation_speed = 2.0f;
+  float vr_stick_deadzone = 0.15f;
+  float vr_drift_correction_alpha = 0.01f;
+  float vr_snap_turn_angle = 30.0f;
+  float vr_lighting_overlay_alpha = 0.25f;
+
+  static const char* GetVRNavigationModeName(VRNavigationMode mode);
+  static const char* GetVRNavigationModeDisplayName(VRNavigationMode mode);
+  static std::optional<VRNavigationMode> ParseVRNavigationModeName(const char* str);
+
 #ifndef __ANDROID__
   u16 gdb_server_port = DEFAULT_GDB_SERVER_PORT;
   bool enable_gdb_server = false;

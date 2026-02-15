@@ -55,6 +55,10 @@ public:
     bool vk_khr_push_descriptor : 1;
     bool vk_khr_shader_non_semantic_info : 1;
     bool vk_khr_swapchain_maintenance1 : 1;
+#ifdef ENABLE_OPENXR
+    bool vk_khr_external_memory : 1;
+    bool vk_khr_external_memory_fd : 1;
+#endif
   };
 
   using ExtensionList = std::vector<const char*>;

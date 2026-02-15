@@ -691,6 +691,22 @@ bool CPU::PGXP::GetPreciseVertex(u32 addr, u32 value, int x, int y, int xOffs, i
   return false;
 }
 
+bool CPU::PGXP::GetPreciseVertexFor3DScreenshot(u32 addr, u32 value, int x, int y, int xOffs, int yOffs, float* out_x,
+                                                float* out_y, float* out_z)
+{
+  const PGXPValue* vert = GetPtr(addr);
+  if (vert && ((vert->flags & VALID_XY) == VALID_XY) && (vert->value == value))
+  {
+    // Return raw 3D position without truncation or offset
+    *out_x = vert->x;
+    *out_y = vert->y;
+    *out_z = vert->z;
+    return true;
+  }
+
+  return false;
+}
+
 void CPU::PGXP::CPU_LW(Instruction instr, u32 addr, u32 rtVal)
 {
   // Rt = Mem[Rs + Im]

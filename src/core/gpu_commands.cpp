@@ -6,6 +6,7 @@
 #include "gpu_backend.h"
 #include "gpu_dump.h"
 #include "gpu_helpers.h"
+#include "screenshot_3d_internal.h"
 #include "video_thread_commands.h"
 #include "interrupt_controller.h"
 #include "system.h"
@@ -486,6 +487,49 @@ bool GPU::HandleRenderPolygonCommand()
 
   PrepareForDraw();
 
+  // Pass poly to Screenshot3D (VR geometry capture)
+  if (Screenshot3D::WantsPolygon())
+  {
+    int k = 0;
+    GPUBackendDrawPolygonCommand::Vertex v[4];
+
+    const u32 s3d_first_color = rc.color_for_first_vertex;
+    const bool s3d_shaded = rc.shading_enable;
+    const bool s3d_textured = rc.texture_enable;
+
+    std::array<float, 3> pgxp_v[4];
+    bool use_pgxp = Screenshot3D::ShouldUsePGXP();
+
+    for (u32 i = 0; i < num_vertices; i++)
+    {
+      v[i].color = (s3d_shaded && i > 0) ? (FifoPeek(k++) & UINT32_C(0x00FFFFFF)) : s3d_first_color;
+      const u64 maddr_and_pos = m_fifo.Peek(k++);
+      const GPUVertexPosition vp{Truncate32(maddr_and_pos)};
+      v[i].x = vp.x;
+      v[i].y = vp.y;
+      v[i].texcoord = s3d_textured ? Truncate16(FifoPeek(k++)) : 0;
+
+      if (use_pgxp)
+      {
+        use_pgxp = CPU::PGXP::GetPreciseVertexFor3DScreenshot(
+          Truncate32(maddr_and_pos >> 32),
+          vp.bits,
+          m_drawing_offset.x + vp.x, m_drawing_offset.y + vp.y,
+          m_drawing_offset.x, m_drawing_offset.y,
+          &pgxp_v[i][0], &pgxp_v[i][1], &pgxp_v[i][2]
+        );
+      }
+    }
+
+    Screenshot3D::DrawPolygon(
+      rc, v,
+      m_draw_mode.mode_reg,
+      m_draw_mode.palette_reg.bits,
+      m_draw_mode.texture_window,
+      use_pgxp ? pgxp_v : nullptr
+    );
+  }
+
   if (g_settings.gpu_pgxp_enable)
   {
     GPUBackendDrawPrecisePolygonCommand* RESTRICT cmd = GPUBackend::NewDrawPrecisePolygonCommand(num_vertices);
@@ -733,6 +777,48 @@ bool GPU::HandleRenderRectangleCommand()
   m_fifo.RemoveOne();
 
   PrepareForDraw();
+
+  // Pass rect to Screenshot3D (VR geometry capture)
+  if (Screenshot3D::WantsRectangle())
+  {
+    int k = 0;
+    GPUBackendDrawPolygonCommand::Vertex v;
+
+    v.color = rc.color_for_first_vertex;
+
+    const GPUVertexPosition vp_s3d{FifoPeek(k++)};
+    v.x = TruncateGPUVertexPosition(vp_s3d.x);
+    v.y = TruncateGPUVertexPosition(vp_s3d.y);
+
+    v.texcoord = rc.texture_enable ? Truncate16(FifoPeek(k++)) : 0;
+
+    u16 s3d_width, s3d_height;
+    switch (rc.rectangle_size)
+    {
+      case GPUDrawRectangleSize::R1x1: s3d_width = 1; s3d_height = 1; break;
+      case GPUDrawRectangleSize::R8x8: s3d_width = 8; s3d_height = 8; break;
+      case GPUDrawRectangleSize::R16x16: s3d_width = 16; s3d_height = 16; break;
+      default:
+      {
+        const u32 width_and_height = FifoPeek(k++);
+        s3d_width = static_cast<u16>(width_and_height & VRAM_WIDTH_MASK);
+        s3d_height = static_cast<u16>((width_and_height >> 16) & VRAM_HEIGHT_MASK);
+      }
+      break;
+    }
+
+    if (s3d_width < MAX_PRIMITIVE_WIDTH && s3d_height < MAX_PRIMITIVE_HEIGHT)
+    {
+      Screenshot3D::DrawRectangle(
+        rc, v,
+        s3d_width, s3d_height,
+        m_draw_mode.mode_reg,
+        m_draw_mode.palette_reg.bits,
+        m_draw_mode.texture_window
+      );
+    }
+  }
+
   GPUBackendDrawRectangleCommand* cmd = GPUBackend::NewDrawRectangleCommand();
   FillDrawCommand(cmd, rc);
   cmd->color = rc.color_for_first_vertex;

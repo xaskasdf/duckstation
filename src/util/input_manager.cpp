@@ -754,6 +754,9 @@ static std::array<const char*, static_cast<u32>(InputSourceType::Count)> s_input
 #ifdef __ANDROID__
   "Android",
 #endif
+#ifdef ENABLE_OPENXR
+  "OpenXR",
+#endif
 }};
 
 InputSource* InputManager::GetInputSourceInterface(InputSourceType type)
@@ -792,6 +795,11 @@ bool InputManager::GetInputSourceDefaultEnabled(InputSourceType type)
 
 #ifdef __ANDROID__
     case InputSourceType::Android:
+      return true;
+#endif
+
+#ifdef ENABLE_OPENXR
+    case InputSourceType::OpenXR:
       return true;
 #endif
 
@@ -2508,6 +2516,9 @@ void InputManager::ReloadSourcesAndBindings(const SettingsInterface& sources_si,
 #endif
 #ifdef __ANDROID__
   UpdateInputSourceState(sources_si, settings_lock, InputSourceType::Android, &InputSource::CreateAndroidSource);
+#endif
+#ifdef ENABLE_OPENXR
+  UpdateInputSourceState(sources_si, settings_lock, InputSourceType::OpenXR, &InputSource::CreateOpenXRSource);
 #endif
 
   UpdatePointerCount();

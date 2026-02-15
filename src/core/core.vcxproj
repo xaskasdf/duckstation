@@ -84,6 +84,11 @@
     <ClCompile Include="system.cpp" />
     <ClCompile Include="timers.cpp" />
     <ClCompile Include="timing_event.cpp" />
+    <ClCompile Include="freecam.cpp" />
+    <ClCompile Include="vr_geometry_capture.cpp" />
+    <ClCompile Include="vr_texture_capture.cpp" />
+    <ClCompile Include="vr_camera_injector.cpp" />
+    <ClCompile Include="vr_scene_buffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="achievements_private.h" />
@@ -177,6 +182,11 @@
     <ClInclude Include="timers.h" />
     <ClInclude Include="timing_event.h" />
     <ClInclude Include="types.h" />
+    <ClInclude Include="freecam.h" />
+    <ClInclude Include="screenshot_3d.h" />
+    <ClInclude Include="screenshot_3d_internal.h" />
+    <ClInclude Include="vr_camera_injector.h" />
+    <ClInclude Include="vr_scene_buffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dep\imgui\imgui.vcxproj">

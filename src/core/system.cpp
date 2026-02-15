@@ -34,6 +34,7 @@
 #include "pio.h"
 #include "psf_loader.h"
 #include "save_state_version.h"
+#include "screenshot_3d.h"
 #include "sio.h"
 #include "sound_effect_manager.h"
 #include "spu.h"
@@ -41,6 +42,8 @@
 #include "timers.h"
 #include "video_presenter.h"
 #include "video_thread.h"
+
+#include "util/vr/vr_integration.h"
 
 #include "scmversion/scmversion.h"
 
@@ -2165,6 +2168,7 @@ void System::DestroySystem()
   CPU::Shutdown();
   Bus::Shutdown();
   TimingEvents::Shutdown();
+  Screenshot3D::Shutdown();
   Achievements::OnSystemDestroyed();
   ClearRunningGame();
 
@@ -2321,6 +2325,16 @@ void System::FrameDone()
 
   Timer::Value current_time = Timer::GetCurrentValue();
   GTE::UpdateFreecam(current_time);
+
+  // VR frame loop - process OpenXR events and render stereo frame
+  if (VR::BeginFrame())
+  {
+    if (VR::ShouldRender())
+    {
+      VR::RenderStereo();
+    }
+    VR::EndFrame();
+  }
 
   // memory card fast forward
   if (s_state.memory_card_fast_forward_frames > 0)

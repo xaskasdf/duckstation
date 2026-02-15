@@ -36,6 +36,9 @@ enum class InputSourceType : u32
 #ifdef __ANDROID__
   Android,
 #endif
+#ifdef ENABLE_OPENXR
+  OpenXR,
+#endif
   Count,
 };
 

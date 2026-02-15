@@ -122,4 +122,7 @@ public:
 #else
   static std::unique_ptr<InputSource> CreateAndroidSource();
 #endif
+#ifdef ENABLE_OPENXR
+  static std::unique_ptr<InputSource> CreateOpenXRSource();
+#endif
 };

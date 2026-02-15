@@ -64,6 +64,7 @@
   X(Timers)                                                                                                            \
   X(TimingEvents)                                                                                                      \
   X(Ungrouped)                                                                                                         \
+  X(VR)                                                                                                                \
   X(VideoThread)                                                                                                       \
   X(Win32RawInputSource)                                                                                               \
   X(WindowInfo)                                                                                                        \

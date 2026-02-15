@@ -153,6 +153,15 @@ enum class GPUDumpCompressionMode : u8
   MaxCount
 };
 
+enum class VRNavigationMode : u8
+{
+  Tank,       // Joystick-only rotation (right stick)
+  CameraYaw,  // Game camera forward direction
+  Hybrid,     // Joystick + drift correction toward camera yaw
+  SnapTurn,   // Fixed-angle discrete rotation on stick flick
+  Count
+};
+
 enum class DisplayCropMode : u8
 {
   None,

@@ -115,6 +115,12 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="xinput_source.h" />
+    <ClInclude Include="openxr_input_source.h" />
+    <ClInclude Include="vr\openxr_loader.h" />
+    <ClInclude Include="vr\vr_integration.h" />
+    <ClInclude Include="vr\vr_player_tracker.h" />
+    <ClInclude Include="vr\vr_renderer.h" />
+    <ClInclude Include="vr\vr_system.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="animated_image.cpp" />
@@ -226,6 +232,12 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="xinput_source.cpp" />
+    <ClCompile Include="openxr_input_source.cpp" />
+    <ClCompile Include="vr\openxr_loader.cpp" />
+    <ClCompile Include="vr\vr_integration.cpp" />
+    <ClCompile Include="vr\vr_player_tracker.cpp" />
+    <ClCompile Include="vr\vr_renderer.cpp" />
+    <ClCompile Include="vr\vr_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dep\cubeb\cubeb.vcxproj">

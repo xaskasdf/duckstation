@@ -85,6 +85,42 @@ static QSpinBox* setIntRangeTweakOption(QTableWidget* table, int row, int value)
   return cb;
 }
 
+static QDoubleSpinBox* addFloatRangeTweakOption(SettingsWindow* dialog, QTableWidget* table, QString name,
+                                                std::string section, std::string key, float min_value, float max_value,
+                                                float step_value, float default_value)
+{
+  const int row = table->rowCount();
+
+  table->insertRow(row);
+
+  QTableWidgetItem* name_item = new QTableWidgetItem(name);
+  name_item->setFlags(name_item->flags() & ~(Qt::ItemIsEditable | Qt::ItemIsSelectable));
+  table->setItem(row, 0, name_item);
+
+  QDoubleSpinBox* cb = new QDoubleSpinBox(table);
+  cb->setMinimum(min_value);
+  cb->setMaximum(max_value);
+  cb->setSingleStep(step_value);
+
+  if (!section.empty() || !key.empty())
+  {
+    SettingWidgetBinder::BindWidgetToFloatSetting(dialog->getSettingsInterface(), cb, std::move(section),
+                                                  std::move(key), default_value);
+  }
+
+  table->setCellWidget(row, 1, cb);
+  return cb;
+}
+
+static QDoubleSpinBox* setFloatRangeTweakOption(QTableWidget* table, int row, float value)
+{
+  QWidget* widget = table->cellWidget(row, 1);
+  QDoubleSpinBox* cb = qobject_cast<QDoubleSpinBox*>(widget);
+  Assert(cb);
+  cb->setValue(value);
+  return cb;
+}
+
 template<typename T>
 static QComboBox* addChoiceTweakOption(SettingsWindow* dialog, QTableWidget* table, QString name, std::string section,
                                        std::string key, std::optional<T> (*parse_callback)(const char*),
@@ -326,6 +362,33 @@ void AdvancedSettingsWidget::addTweakOptions()
   addBooleanTweakOption(m_dialog, m_ui.tweakOptionTable, tr("Enable PCDrv"), "PCDrv", "Enabled", false);
   addBooleanTweakOption(m_dialog, m_ui.tweakOptionTable, tr("Enable PCDrv Writes"), "PCDrv", "EnableWrites", false);
   addDirectoryOption(m_dialog, m_ui.tweakOptionTable, tr("PCDrv Root Directory"), "PCDrv", "Root");
+
+  // VR Settings
+  addBooleanTweakOption(m_dialog, m_ui.tweakOptionTable, tr("Enable VR Mode"), "VR", "Enable", false);
+  addBooleanTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR First-Person Mode"), "VR", "FirstPersonEnable", false);
+  addBooleanTweakOption(m_dialog, m_ui.tweakOptionTable, tr("Show VR Debug Window"), "VR", "ShowDebugWindow", false);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Eye Height (meters)"), "VR", "EyeHeight", 0.0f,
+                           0.5f, 0.01f, 0.160f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR World Scale"), "VR", "WorldScale", 0.0001f, 0.01f,
+                           0.0001f, 0.001f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Screen Distance (meters)"), "VR", "ScreenDistance",
+                           0.5f, 10.0f, 0.5f, 2.0f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Screen Scale"), "VR", "ScreenScale", 0.5f, 5.0f,
+                           0.5f, 1.5f);
+  addChoiceTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Navigation Mode"), "VR", "NavigationMode",
+                       &Settings::ParseVRNavigationModeName, &Settings::GetVRNavigationModeName,
+                       &Settings::GetVRNavigationModeDisplayName, static_cast<u32>(VRNavigationMode::Count),
+                       VRNavigationMode::Hybrid);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Rotation Speed (rad/s)"), "VR", "RotationSpeed",
+                           0.5f, 5.0f, 0.5f, 2.0f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Stick Deadzone"), "VR", "StickDeadzone", 0.0f, 0.5f,
+                           0.05f, 0.15f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Drift Correction (Hybrid)"), "VR",
+                           "DriftCorrectionAlpha", 0.001f, 0.1f, 0.001f, 0.01f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Snap Turn Angle (degrees)"), "VR", "SnapTurnAngle",
+                           10.0f, 90.0f, 5.0f, 30.0f);
+  addFloatRangeTweakOption(m_dialog, m_ui.tweakOptionTable, tr("VR Lighting Overlay Alpha"), "VR",
+                           "LightingOverlayAlpha", 0.0f, 1.0f, 0.05f, 0.25f);
 }
 
 void AdvancedSettingsWidget::onResetToDefaultClicked()
@@ -371,6 +434,19 @@ void AdvancedSettingsWidget::onResetToDefaultClicked()
     setBooleanTweakOption(m_ui.tweakOptionTable, i++, false);                              // Enable PCDRV
     setBooleanTweakOption(m_ui.tweakOptionTable, i++, false);                              // Enable PCDRV Writes
     setDirectoryOption(m_ui.tweakOptionTable, i++, "");                                    // PCDrv Root Directory
+    setBooleanTweakOption(m_ui.tweakOptionTable, i++, false);                              // VR Enable
+    setBooleanTweakOption(m_ui.tweakOptionTable, i++, false);                              // VR First-Person Mode
+    setBooleanTweakOption(m_ui.tweakOptionTable, i++, false);                              // Show VR Debug Window
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 0.160f);                          // VR Eye Height
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 0.001f);                          // VR World Scale
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 2.0f);                            // VR Screen Distance
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 1.5f);                            // VR Screen Scale
+    setChoiceTweakOption(m_ui.tweakOptionTable, i++, VRNavigationMode::Hybrid);            // VR Navigation Mode
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 2.0f);                            // VR Rotation Speed
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 0.15f);                           // VR Stick Deadzone
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 0.01f);                           // VR Drift Correction
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 30.0f);                           // VR Snap Turn Angle
+    setFloatRangeTweakOption(m_ui.tweakOptionTable, i++, 0.25f);                           // VR Lighting Overlay Alpha
 
     return;
   }
@@ -407,6 +483,19 @@ void AdvancedSettingsWidget::onResetToDefaultClicked()
   sif->DeleteValue("PCDrv", "Enabled");
   sif->DeleteValue("PCDrv", "EnableWrites");
   sif->DeleteValue("PCDrv", "Root");
+  sif->DeleteValue("VR", "Enable");
+  sif->DeleteValue("VR", "FirstPersonEnable");
+  sif->DeleteValue("VR", "ShowDebugWindow");
+  sif->DeleteValue("VR", "EyeHeight");
+  sif->DeleteValue("VR", "WorldScale");
+  sif->DeleteValue("VR", "ScreenDistance");
+  sif->DeleteValue("VR", "ScreenScale");
+  sif->DeleteValue("VR", "NavigationMode");
+  sif->DeleteValue("VR", "RotationSpeed");
+  sif->DeleteValue("VR", "StickDeadzone");
+  sif->DeleteValue("VR", "DriftCorrectionAlpha");
+  sif->DeleteValue("VR", "SnapTurnAngle");
+  sif->DeleteValue("VR", "LightingOverlayAlpha");
   QtHost::SaveGameSettings(sif, true);
   g_core_thread->reloadGameSettings();
   while (m_ui.tweakOptionTable->rowCount() > 0)

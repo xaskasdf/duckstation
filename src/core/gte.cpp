@@ -6,7 +6,9 @@
 #include "cpu_core_private.h"
 #include "cpu_pgxp.h"
 #include "host.h"
+#include "screenshot_3d_internal.h"
 #include "settings.h"
+#include "vr_camera_injector.h"
 
 #include "util/state_wrapper.h"
 
@@ -733,6 +735,13 @@ void GTE::RTPS(const s16 V[3], u8 shift, bool lm, bool last)
     ApplyFreecam(x, y, z);
 #endif
 
+  // Save pre-injection values for Screenshot3D (3D vertex capture) and for
+  // MAC/IR/SZ registers. The VR camera injection must ONLY affect screen
+  // coordinates (SXY) for NCLIP culling - NOT MAC/IR/SZ which the game reads
+  // back for gameplay logic (collision, pointer computation, etc.).
+  const s64 pre_inject_x = x, pre_inject_y = y, pre_inject_z = z;
+
+  // MAC/IR/SZ use original (non-injected) values so game logic stays correct.
   TruncateAndSetMAC<1>(x, shift);
   TruncateAndSetMAC<2>(y, shift);
   TruncateAndSetMAC<3>(z, shift);
@@ -749,6 +758,24 @@ void GTE::RTPS(const s16 V[3], u8 shift, bool lm, bool last)
   // SZ3 = MAC3 SAR ((1-sf)*12)                           ;ScreenZ FIFO 0..+FFFFh
   PushSZ(s32(z >> 12));
 
+  // --- VR camera injection: only affects screen coordinate projection ---
+  // Apply delta rotation to get injected IR1/IR2 for SXY computation.
+  // This makes NCLIP see geometry from the VR viewpoint while the game's
+  // MAC/IR/SZ registers stay untouched (preventing crashes from corrupted values).
+  s32 ir1_for_screen = REGS.IR1;
+  s32 ir2_for_screen = REGS.IR2;
+  if (VR::g_camera_injector.enabled)
+  {
+    s64 vr_x = pre_inject_x, vr_y = pre_inject_y, vr_z = pre_inject_z;
+    VR::g_camera_injector.ApplyToVertex(vr_x, vr_y, vr_z);
+
+    // Compute injected IR1/IR2 using same truncation as above
+    s64 vr_mac1 = (shift == 12) ? (vr_x >> 12) : vr_x;
+    s64 vr_mac2 = (shift == 12) ? (vr_y >> 12) : vr_y;
+    ir1_for_screen = static_cast<s32>(std::clamp<s64>(vr_mac1, lm ? 0 : IR123_MIN_VALUE, IR123_MAX_VALUE));
+    ir2_for_screen = static_cast<s32>(std::clamp<s64>(vr_mac2, lm ? 0 : IR123_MIN_VALUE, IR123_MAX_VALUE));
+  }
+
   // MAC0=(((H*20000h/SZ3)+1)/2)*IR1+OFX, SX2=MAC0/10000h ;ScrX FIFO -400h..+3FFh
   // MAC0=(((H*20000h/SZ3)+1)/2)*IR2+OFY, SY2=MAC0/10000h ;ScrY FIFO -400h..+3FFh
   const s64 result = static_cast<s64>(ZeroExtend64(UNRDivide(REGS.H, REGS.SZ3)));
@@ -757,33 +784,43 @@ void GTE::RTPS(const s16 V[3], u8 shift, bool lm, bool last)
   switch (s_config.aspect_ratio)
   {
     case GTEAspectRatio::R16_9:
-      Sx = ((((s64(result) * s64(REGS.IR1)) * s64(3)) / s64(4)) + s64(REGS.OFX));
+      Sx = ((((s64(result) * s64(ir1_for_screen)) * s64(3)) / s64(4)) + s64(REGS.OFX));
       break;
 
     case GTEAspectRatio::R19_9:
-      Sx = ((((s64(result) * s64(REGS.IR1)) * s64(12)) / s64(19)) + s64(REGS.OFX));
+      Sx = ((((s64(result) * s64(ir1_for_screen)) * s64(12)) / s64(19)) + s64(REGS.OFX));
       break;
 
     case GTEAspectRatio::R20_9:
-      Sx = ((((s64(result) * s64(REGS.IR1)) * s64(3)) / s64(5)) + s64(REGS.OFX));
+      Sx = ((((s64(result) * s64(ir1_for_screen)) * s64(3)) / s64(5)) + s64(REGS.OFX));
       break;
 
     case GTEAspectRatio::Custom:
-      Sx = ((((s64(result) * s64(REGS.IR1)) * s64(s_config.custom_aspect_ratio_numerator)) /
+      Sx = ((((s64(result) * s64(ir1_for_screen)) * s64(s_config.custom_aspect_ratio_numerator)) /
              s64(s_config.custom_aspect_ratio_denominator)) +
             s64(REGS.OFX));
       break;
 
     case GTEAspectRatio::None:
     default:
-      Sx = (s64(result) * s64(REGS.IR1) + s64(REGS.OFX));
+      Sx = (s64(result) * s64(ir1_for_screen) + s64(REGS.OFX));
       break;
   }
 
-  const s64 Sy = s64(result) * s64(REGS.IR2) + s64(REGS.OFY);
+  const s64 Sy = s64(result) * s64(ir2_for_screen) + s64(REGS.OFY);
   CheckMACOverflow<0>(Sx);
   CheckMACOverflow<0>(Sy);
-  PushSXY(s32(Sx >> 16), s32(Sy >> 16));
+
+  s32 Sx32 = s32(Sx >> 16);
+  s32 Sy32 = s32(Sy >> 16);
+
+  // Use pre-injection positions for Screenshot3D so VR geometry stays in game camera space.
+  const float screenshot_x = float(pre_inject_x) / (static_cast<float>(1 << shift));
+  const float screenshot_y = float(pre_inject_y) / (static_cast<float>(1 << shift));
+  const float screenshot_z = float(pre_inject_z) / 4096.0f;
+  Screenshot3D::PushVertex(screenshot_x, screenshot_y, screenshot_z, Sx32, Sy32);
+
+  PushSXY(Sx32, Sy32);
 
   if (g_settings.gpu_pgxp_enable)
   {
@@ -917,17 +954,25 @@ void GTE::Execute_NCLIP(Instruction inst)
   // MAC0 =   SX0*SY1 + SX1*SY2 + SX2*SY0 - SX0*SY2 - SX1*SY0 - SX2*SY1
   REGS.FLAG.Clear();
 
-  TruncateAndSetMAC<0>(s64(REGS.SXY0[0]) * s64(REGS.SXY1[1]) + s64(REGS.SXY1[0]) * s64(REGS.SXY2[1]) +
-                         s64(REGS.SXY2[0]) * s64(REGS.SXY0[1]) - s64(REGS.SXY0[0]) * s64(REGS.SXY2[1]) -
-                         s64(REGS.SXY1[0]) * s64(REGS.SXY0[1]) - s64(REGS.SXY2[0]) * s64(REGS.SXY1[1]),
-                       0);
+  s64 value = s64(REGS.SXY0[0]) * s64(REGS.SXY1[1]) + s64(REGS.SXY1[0]) * s64(REGS.SXY2[1]) +
+              s64(REGS.SXY2[0]) * s64(REGS.SXY0[1]) - s64(REGS.SXY0[0]) * s64(REGS.SXY2[1]) -
+              s64(REGS.SXY1[0]) * s64(REGS.SXY0[1]) - s64(REGS.SXY2[0]) * s64(REGS.SXY1[1]);
+
+  if (Screenshot3D::WantsModifyNCLIP())
+    Screenshot3D::ModifyNCLIP(value);
+
+  TruncateAndSetMAC<0>(value, 0);
 
   REGS.FLAG.UpdateError();
 }
 
 void GTE::Execute_NCLIP_PGXP(Instruction inst)
 {
-  if (CPU::PGXP::GTE_HasPreciseVertices(REGS.dr32[12], REGS.dr32[13], REGS.dr32[14]))
+  if (Screenshot3D::WantsModifyNCLIP())
+  {
+    Execute_NCLIP(inst);
+  }
+  else if (CPU::PGXP::GTE_HasPreciseVertices(REGS.dr32[12], REGS.dr32[13], REGS.dr32[14]))
   {
     REGS.FLAG.Clear();
     REGS.MAC0 = static_cast<s32>(CPU::PGXP::GTE_NCLIP());
