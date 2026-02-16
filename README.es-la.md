@@ -6,6 +6,9 @@ Traducción:
 
 > **Este es un fork VR de [DuckStation](https://github.com/stenzek/duckstation).** Agrega renderizado estereoscópico 3D vía OpenXR usando geometría real del PS1 capturada del GTE (Geometry Transformation Engine). Basado en el trabajo de captura de vértices de [scurest/duckstation-3D-Screenshot](https://github.com/scurest/duckstation-3D-Screenshot).
 
+> [!WARNING]
+> **Proyecto de fin de semana vibe-codeado.** Esto se hizo por diversión, no para producción. Es muy un trabajo en progreso. La mayoría de los juegos van a tener glitches visuales, geometría faltante, o simplemente verse mal — y eso no es un problema de rendimiento, es un problema de "la PS1 hace cosas raras". Por ejemplo, Pepsiman renderiza horrible y es básicamente injugable, a pesar de ser un juego simple. Esperen jank. Si funciona, genial. Si no, bueno, ese es el estado actual de las cosas. Contribuciones y reportes de bugs son bienvenidos, pero por favor mantengan las expectativas a raya.
+
 **Versiones upstream:** https://github.com/stenzek/duckstation/releases/tag/latest
 
 **Wiki:** https://www.duckstation.org/wiki/
