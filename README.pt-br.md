@@ -1,12 +1,12 @@
 Tradução:
 
-# DuckStation - Emulador de PlayStation 1, também conhecido como PSX
+# DuckStation VR - Emulador de PlayStation 1, também conhecido como PSX, com suporte OpenXR VR
 
-[Últimas Notícias](#latest-news) | [Recursos](#features) | [Download e Execução](#downloading-and-running) | [Compilação](#building) | [Avisos Legais](#disclaimers)
+[Recursos](#recursos) | [Suporte VR](#suporte-vr) | [Download e Execução](#download-e-execução) | [Compilação](#compilação) | [Avisos Legais](#avisos-legais)
 
-**Últimas Versões para Windows 10/11, Linux (AppImage/Flatpak) e macOS:** https://github.com/stenzek/duckstation/releases/tag/latest
+> **Este é um fork VR do [DuckStation](https://github.com/stenzek/duckstation).** Adiciona renderização estereoscópica 3D via OpenXR usando geometria real do PS1 capturada do GTE (Geometry Transformation Engine). Baseado no trabalho de captura de vértices de [scurest/duckstation-3D-Screenshot](https://github.com/scurest/duckstation-3D-Screenshot).
 
-**Lista de Compatibilidade de Jogos:** https://docs.google.com/spreadsheets/d/1H66MxViRjjE5f8hOl5RQmF5woS1murio2dsLn14kEqo/edit
+**Versões upstream:** https://github.com/stenzek/duckstation/releases/tag/latest
 
 **Wiki:** https://www.duckstation.org/wiki/
 
@@ -51,11 +51,68 @@ Outros recursos incluem:
  - Controles multitap (até 8 dispositivos).
  - RetroAchievements.
  - Carregamento/aplicação automática de patches PPF.
+ - **Renderização estereoscópica VR via OpenXR** com head tracking, injeção de câmera e suporte ao controle Quest Touch (veja [Suporte VR](#suporte-vr)).
+
+## Suporte VR
+
+Este fork adiciona renderização estereoscópica 3D para headsets VR via OpenXR. Em vez de projetar o jogo em uma tela virtual, ele captura geometria 3D real do GTE do PS1 antes da projeção e a re-renderiza em estéreo a partir da perspectiva do headset.
+
+### Como funciona
+
+O Geometry Transformation Engine (GTE) do PS1 transforma vértices 3D em coordenadas 2D de tela. Este fork intercepta os dados dos vértices antes da projeção, preservando as posições 3D completas. Um sistema de injeção de câmera rotaciona a saída do GTE para que o culling do lado da CPU do jogo funcione com a direção de visão do VR, permitindo que a cena completa seja renderizada a partir de qualquer orientação do headset.
+
+### Recursos
+
+ - Renderização estéreo com matrizes de visão e projeção por olho via swapchains Vulkan do OpenXR.
+ - Injeção de câmera para direção de visão com head tracking (modo primeira pessoa).
+ - Captura de texturas PS1 da VRAM com remapeamento de 256 slots e uploads Vulkan em lote.
+ - Quad layer OpenXR para conteúdo 2D (menus, telas de carregamento, BIOS).
+ - Entrada do controle Quest Touch mapeada como gamepad PS1 (A/B/X/Y, triggers, grips, sticks).
+ - Três modos de navegação: Tank, Camera Yaw e Hybrid com snap turn.
+ - Escala do mundo, altura dos olhos, distância da tela e velocidade de rotação configuráveis.
+
+### Requisitos
+
+ - Headset Meta Quest (Quest 1/2/3/Pro) com Quest Link ou Air Link, ou qualquer headset compatível com OpenXR via SteamVR.
+ - Windows 10/11 x64 com GPU compatível com Vulkan.
+ - Runtime OpenXR ativo (Oculus ou SteamVR).
+ - PGXP deve estar habilitado para rastreamento de vértices 3D.
+
+### Início rápido
+
+1. Compile a partir do código-fonte (veja [Compilação](#compilando-vr)).
+2. Inicie o DuckStation e carregue um jogo.
+3. Vá em **Configurações > Configurações Avançadas > Tweaks** e habilite **Enable VR Mode**.
+4. Opcionalmente habilite **VR First-Person Mode** para injeção de câmera.
+5. Coloque seu headset — o jogo deve aparecer em 3D estéreo.
+
+### Mapeamento de controles (Quest Touch)
+
+| Botão Quest | Entrada PS1 | Botão Quest | Entrada PS1 |
+|---|---|---|---|
+| A | Cross | Trigger Esquerdo | L2 |
+| B | Circle | Trigger Direito | R2 |
+| X | Square | Grip Esquerdo | L1 |
+| Y | Triangle | Grip Direito | R1 |
+| Menu | Start | Clique Stick Esquerdo | L3 |
+| Stick Esquerdo | D-Pad / Analógico | Clique Stick Direito | R3 |
+| Stick Direito | Rotação Yaw VR | Ambos Cliques de Stick | Ciclar Modo Nav |
+
+### Limitações conhecidas
+
+ - Elementos HUD 2D (barras de vida, textos) não são visíveis durante gameplay 3D.
+ - Modos de semi-transparência do PS1 (aditivo, subtrativo) não estão totalmente implementados.
+ - Iluminação de cena via overlays transparentes sem textura está ausente.
+ - Backgrounds pré-renderizados (Resident Evil, Final Fantasy) permanecem em 2D.
+ - Testado apenas no Quest 1 via Quest Link; outros headsets podem precisar de ajustes.
+
+Veja os [issues abertos](https://github.com/xaskasdf/duckstation/issues) para a lista completa de melhorias planejadas.
 
 ## Requisitos do Sistema
  - Um CPU rápido. Mas precisa ser x86_64, AArch32/armv7 ou AArch64/ARMv8, caso contrário, o recompilação será lenta.
  - Para os renderizadores de hardware, é necessário uma GPU compatível com OpenGL 3.1/OpenGL ES 3.1/Direct3D 11 Feature Level 10.0 (ou Vulkan 1.0) e superior. basicamente, qualquer computador produzido nos últimos 10 anos mais ou menos deve dar conta.
  - Controlador de jogo compatível com SDL, XInput ou DInput (por exemplo, XB360/XBOne/XBSeries). Usuários de DualShock 3 no Windows precisarão instalar os drivers oficiais do DualShock 3 incluídos como parte do PlayStation Now.
+ - **Para VR:** Um headset compatível com OpenXR (Meta Quest, Valve Index, etc.), uma GPU compatível com Vulkan e um runtime OpenXR ativo (Oculus ou SteamVR) no Windows 10/11 x64.
 
 ## Download e Execução
 Executáveis do DuckStation para Windows x64/ARM64, Linux x86_64 (nos formatos AppImage/Flatpak) e para macOS estão disponíveis via GitHub na aba Releases e são automaticamente compilados a cada commit/envio. Executáveis ou pacotes distribuídos por outras fontes podem estar desatualizados e não são suportados pelo desenvolvedor, por favor, entre em contato com eles para obter suporte, não conosco.
@@ -133,6 +190,22 @@ Para esses jogos, certifique-se de que a imagem do CD e seu arquivo corresponden
 Por exemplo, se sua imagem de disco se chamasse `Spyro3.cue`, você colocaria o arquivo SBI na mesma pasta e o nomearia como `Spyro3.sbi`.
 
 ## Compilação
+
+### Compilando VR
+
+O fork VR atualmente é apenas para Windows (OpenXR + Vulkan). Suporte VR para Linux/macOS ainda não está disponível.
+
+Requisitos:
+ - Visual Studio 2022 ou mais recente com a carga de trabalho "Desktop development with C++" instalada.
+
+1. Clone este fork: `git clone https://github.com/xaskasdf/duckstation.git && cd duckstation && git checkout feature/vr`.
+2. Baixe o pacote de dependências em https://github.com/stenzek/duckstation-ext-qt-minimal/releases/download/latest/deps-x64.7z e extraia-o para `dep\msvc`.
+3. Abra `duckstation.sln` no Visual Studio.
+4. Compile o projeto `duckstation-qt` na configuração Release x64.
+5. O binário está localizado em `bin/x64/duckstation-qt-x64-Release-MSVC.exe`.
+6. Conecte seu headset VR, certifique-se de que o runtime OpenXR está ativo e habilite VR em **Configurações > Configurações Avançadas > Tweaks**.
+
+Os headers do OpenXR e o loader dinâmico estão incluídos em `dep/openxr/`. Nenhuma instalação adicional de SDK é necessária para compilar.
 
 ### Windows
 Requisitos:

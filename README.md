@@ -1,8 +1,10 @@
-# DuckStation - PlayStation 1, aka. PSX Emulator
+# DuckStation VR - PlayStation 1, aka. PSX Emulator with OpenXR VR Support
 
-[Features](#features) | [Downloading and Running](#downloading-and-running) | [Building](#building) | [Disclaimers](#disclaimers)
+[Features](#features) | [VR Support](#vr-support) | [Downloading and Running](#downloading-and-running) | [Building](#building) | [Disclaimers](#disclaimers)
 
-**Latest Builds for Windows 10/11 (x64/ARM64), Linux (AppImage x64/ARM32/ARM64), and macOS (13.3+ Universal):** https://github.com/stenzek/duckstation/releases/tag/latest
+> **This is a VR fork of [DuckStation](https://github.com/stenzek/duckstation).** It adds OpenXR stereoscopic 3D rendering using real PS1 geometry captured from the GTE (Geometry Transformation Engine). Based on vertex capture work from [scurest/duckstation-3D-Screenshot](https://github.com/scurest/duckstation-3D-Screenshot).
+
+**Upstream releases:** https://github.com/stenzek/duckstation/releases/tag/latest
 
 **Discord Server:** https://www.duckstation.org/discord.html
 
@@ -61,11 +63,68 @@ Other features include:
  - Video capture with Media Foundation (Windows) and [FFmpeg](https://www.ffmpeg.org/) (All Platforms) backends.
  - Free camera function.
  - Parallel port cartridge emulation.
+ - **OpenXR VR stereoscopic rendering** with head tracking, camera injection, and Quest Touch controller support (see [VR Support](#vr-support)).
+
+## VR Support
+
+This fork adds stereoscopic 3D rendering for VR headsets via OpenXR. Instead of projecting the game onto a virtual screen, it captures real 3D geometry from the PS1's GTE before projection and re-renders it in stereo from the headset's perspective.
+
+### How it works
+
+The PS1's Geometry Transformation Engine (GTE) transforms 3D vertices into 2D screen coordinates. This fork intercepts vertex data before projection, preserving full 3D positions. A camera injection system rotates GTE output so the game's own CPU-side culling works with the VR view direction, allowing the full scene to be rendered from any headset orientation.
+
+### Features
+
+ - Stereo rendering with per-eye view and projection matrices via OpenXR Vulkan swapchains.
+ - Camera injection for head-tracked view direction (first-person mode).
+ - PS1 texture capture from VRAM with 256-slot remapping and batched Vulkan uploads.
+ - OpenXR quad layer for 2D content (menus, loading screens, BIOS).
+ - Quest Touch controller input mapped as PS1 gamepad (A/B/X/Y, triggers, grips, sticks).
+ - Three navigation modes: Tank, Camera Yaw, and Hybrid with snap turn.
+ - Configurable world scale, eye height, screen distance, and rotation speed.
+
+### Requirements
+
+ - Meta Quest headset (Quest 1/2/3/Pro) with Quest Link or Air Link, or any OpenXR-compatible headset with SteamVR.
+ - Windows 10/11 x64 with Vulkan-capable GPU.
+ - OpenXR runtime active (Oculus or SteamVR).
+ - PGXP must be enabled for 3D vertex tracking.
+
+### Quick start
+
+1. Build from source (see [Building](#building-vr)).
+2. Launch DuckStation and load a game.
+3. Go to **Settings > Advanced Settings > Tweaks** and enable **Enable VR Mode**.
+4. Optionally enable **VR First-Person Mode** for camera injection.
+5. Put on your headset — the game should appear in stereo 3D.
+
+### Controller mapping (Quest Touch)
+
+| Quest Button | PS1 Input | Quest Button | PS1 Input |
+|---|---|---|---|
+| A | Cross | Left Trigger | L2 |
+| B | Circle | Right Trigger | R2 |
+| X | Square | Left Grip | L1 |
+| Y | Triangle | Right Grip | R1 |
+| Menu | Start | Left Stick Click | L3 |
+| Left Stick | D-Pad / Analog | Right Stick Click | R3 |
+| Right Stick | VR Yaw Rotation | Both Stick Clicks | Cycle Nav Mode |
+
+### Known limitations
+
+ - 2D HUD elements (health bars, text overlays) are not visible during 3D gameplay.
+ - PS1 semi-transparency modes (additive, subtractive) are not fully implemented.
+ - Scene lighting from untextured transparent overlays is missing.
+ - Pre-rendered backgrounds (Resident Evil, Final Fantasy) remain 2D.
+ - Only tested on Quest 1 via Quest Link; other headsets may need adjustments.
+
+See [open issues](https://github.com/xaskasdf/duckstation/issues) for the full list of planned improvements.
 
 ## System Requirements
  - A CPU faster than a potato. But it needs to be x86_64, AArch32/armv7, AArch64/ARMv8, or RISC-V/RV64.
  - A GPU capable of OpenGL 3.1/OpenGL ES 3.1/Direct3D 11 Feature Level 10.0/Vulkan 1.0. So, basically anything made in the last 10 years or so.
  - SDL, XInput or DInput compatible game controller (e.g. XB360/XBOne/XBSeries). DualShock 3 users on Windows will need to install the official DualShock 3 drivers included as part of PlayStation Now.
+ - **For VR:** An OpenXR-compatible headset (Meta Quest, Valve Index, etc.), a Vulkan-capable GPU, and an active OpenXR runtime (Oculus or SteamVR) on Windows 10/11 x64.
 
 ## Downloading and running
 Binaries of DuckStation for Windows x64/ARM64, Linux x86_64/ARM32/ARM64 (in AppImage format), and macOS Universal Binaries are available via GitHub Releases and are automatically built with every commit/push.
@@ -180,9 +239,25 @@ Each release includes the latest version of the database, however you are free t
 
 ## Building
 
+### Building VR
+
+The VR fork is currently Windows-only (OpenXR + Vulkan). Linux/macOS VR support is not yet available.
+
+Requirements:
+ - Visual Studio 2022 or newer with the "Desktop development with C++" workload installed.
+
+1. Clone this fork: `git clone https://github.com/xaskasdf/duckstation.git && cd duckstation && git checkout feature/vr`.
+2. Download the dependencies pack from https://github.com/stenzek/duckstation-ext-qt-minimal/releases/download/latest/deps-x64.7z, and extract it to `dep\msvc`.
+3. Open `duckstation.sln` in Visual Studio.
+4. Build the `duckstation-qt` project in Release x64 configuration.
+5. Binary is located at `bin/x64/duckstation-qt-x64-Release-MSVC.exe`.
+6. Connect your VR headset, ensure the OpenXR runtime is active, and enable VR in **Settings > Advanced Settings > Tweaks**.
+
+OpenXR headers and the dynamic loader are included in `dep/openxr/`. No additional SDK installation is required for building.
+
 ### Windows
 Requirements:
- - Visual Studio 2026 or newer with the "Desktop development with C++" workload installed.
+ - Visual Studio 2022 or newer with the "Desktop development with C++" workload installed.
 
 1. Clone the respository: `git clone https://github.com/stenzek/duckstation.git`.
 2. Download the dependencies pack from https://github.com/stenzek/duckstation-ext-qt-minimal/releases/download/latest/deps-x64.7z, and extract it to `dep\msvc`.
