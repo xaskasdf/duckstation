@@ -8,6 +8,7 @@ on:
     branches:
       - master
       - dev
+      - feature/vr
     paths:
       - 'src/duckstation-qt/translations/*.ts'
   workflow_dispatch:

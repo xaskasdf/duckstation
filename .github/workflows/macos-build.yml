@@ -48,6 +48,13 @@ jobs:
         echo '#define UPDATER_RELEASE_CHANNEL "latest"' >> src/scmversion/tag.h
         echo '#define UPDATER_RELEASE_IS_OFFICIAL 1' >> src/scmversion/tag.h
 
+    - name: Tag as VR Build
+      if: github.ref == 'refs/heads/feature/vr'
+      run: |
+        echo '#pragma once' > src/scmversion/tag.h
+        echo '#define UPDATER_RELEASE_CHANNEL "vr-latest"' >> src/scmversion/tag.h
+        echo '#define UPDATER_RELEASE_IS_OFFICIAL 0' >> src/scmversion/tag.h
+
     - name: Download Patch Archives
       shell: bash
       run: |

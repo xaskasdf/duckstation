@@ -12,6 +12,7 @@ on:
     branches:
       - master
       - dev
+      - feature/vr
     paths-ignore:
       - '**.md'
       - 'appveyor.yml'
@@ -39,7 +40,7 @@ jobs:
     name: 📤 Create Release
     needs: [windows, linux-appimage, linux-cross-appimage, macos]
     runs-on: ubuntu-22.04
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/vr'
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v7
@@ -100,4 +101,18 @@ jobs:
             ./artifacts/DuckStation-Mini-arm64.AppImage
             ./artifacts/DuckStation-armhf.AppImage
             ./artifacts/DuckStation-Mini-armhf.AppImage
+            ./artifacts/duckstation-mac-release.zip
+
+      - name: Create VR Release
+        if: github.ref == 'refs/heads/feature/vr'
+        uses: marvinpinto/action-automatic-releases@d68defdd11f9dcc7f52f35c1b7c236ee7513bcc1
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "vr-latest"
+          prerelease: true
+          title: "Latest VR Build"
+          files: |
+            ./artifacts/duckstation-windows-x64-release.zip
+            ./artifacts/duckstation-windows-x64-release-symbols.zip
+            ./artifacts/DuckStation-x64.AppImage
             ./artifacts/duckstation-mac-release.zip
